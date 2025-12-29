@@ -1,0 +1,185 @@
+// sethaoui oussama  G02 RES
+// ouanassi younes  G02 RES
+//marzoug abdrahim   G02  RES
+
+
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#define MAX_STATES 20
+#define MAX_SYMBOLS 10
+
+int n_states, n_symbols;
+char symbols[MAX_SYMBOLS];
+int start_state;
+
+int final[MAX_STATES];
+int transitions[MAX_STATES][MAX_SYMBOLS][MAX_STATES];
+int epsilon[MAX_STATES][MAX_STATES];
+
+int eclosure[MAX_STATES][MAX_STATES];
+
+/*  Task 1: Read the NFA  */
+void readNFA() {
+    int i, j, k, nb;
+
+    printf("Number of states: ");
+    scanf("%d", &n_states);
+
+    printf("Number of symbols: ");
+    scanf("%d", &n_symbols);
+
+    printf("Symbols (without epsilon): ");
+    for (i = 0; i < n_symbols; i++)
+        scanf(" %c", &symbols[i]);
+
+    printf("Start state: ");
+    scanf("%d", &start_state);
+
+    printf("Final states (1=yes, 0=no):\n");
+    for (i = 0; i < n_states; i++)
+        scanf("%d", &final[i]);
+
+    /* Initialize */
+    for (i = 0; i < n_states; i++)
+        for (j = 0; j < n_symbols; j++)
+            for (k = 0; k < n_states; k++)
+                transitions[i][j][k] = 0;
+
+    for (i = 0; i < n_states; i++)
+        for (j = 0; j < n_states; j++)
+            epsilon[i][j] = 0;
+
+    
+    printf("Transitions (symbol transitions):\n");
+    for (i = 0; i < n_states; i++) {
+        for (j = 0; j < n_symbols; j++) {
+            printf("From state %d with %c, number of destinations: ", i, symbols[j]);
+            scanf("%d", &nb);
+            for (k = 0; k < nb; k++) {
+                int dest;
+                scanf("%d", &dest);
+                transitions[i][j][dest] = 1;
+            }
+        }
+    }
+
+    
+    printf("Epsilon transitions:\n");
+    for (i = 0; i < n_states; i++) {
+        printf("From state %d, number of epsilon transitions: ", i);
+        scanf("%d", &nb);
+        for (j = 0; j < nb; j++) {
+            int dest;
+            scanf("%d", &dest);
+            epsilon[i][dest] = 1;
+        }
+    }
+}
+
+/*  Task 2: Epsilon Closure */
+void epsilonClosure(int s, int visited[]) {
+    int i;
+    for (i = 0; i < n_states; i++) {
+        if (epsilon[s][i] && !visited[i]) {
+            visited[i] = 1;
+            epsilonClosure(i, visited);
+        }
+    }
+}
+
+void computeEClosures() {
+    int i, j;
+    for (i = 0; i < n_states; i++) {
+        int visited[MAX_STATES] = {0};
+        visited[i] = 1;
+        epsilonClosure(i, visited);
+
+        for (j = 0; j < n_states; j++)
+            eclosure[i][j] = visited[j];
+    }
+}
+
+/*  Task 3: New Transitions */
+void computeNewTransitions(int newTrans[MAX_STATES][MAX_SYMBOLS][MAX_STATES]) {
+    int i, j, k, p, q;
+
+    for (i = 0; i < n_states; i++)
+        for (j = 0; j < n_symbols; j++)
+            for (k = 0; k < n_states; k++)
+                newTrans[i][j][k] = 0;
+
+    for (i = 0; i < n_states; i++) {
+        for (j = 0; j < n_symbols; j++) {
+            for (p = 0; p < n_states; p++) {
+                if (eclosure[i][p]) {
+                    for (q = 0; q < n_states; q++) {
+                        if (transitions[p][j][q]) {
+                            for (k = 0; k < n_states; k++) {
+                                if (eclosure[q][k])
+                                    newTrans[i][j][k] = 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/*  Task 4: New Final States  */
+void computeNewFinalStates(int newFinal[]) {
+    int i, j;
+    for (i = 0; i < n_states; i++) {
+        newFinal[i] = 0;
+        for (j = 0; j < n_states; j++) {
+            if (eclosure[i][j] && final[j]) {
+                newFinal[i] = 1;
+                break;
+            }
+        }
+    }
+}
+
+/*  Task 5: Display  */
+void displayNFA(int newTrans[MAX_STATES][MAX_SYMBOLS][MAX_STATES], int newFinal[]) {
+    int i, j, k;
+
+    printf("\n=== NFA without epsilon transitions ===\n");
+
+    printf("Start state: %d\n", start_state);
+
+    printf("Final states: ");
+    for (i = 0; i < n_states; i++)
+        if (newFinal[i]) printf("%d ", i);
+    printf("\n");
+
+    printf("Transitions:\n");
+    for (i = 0; i < n_states; i++) {
+        for (j = 0; j < n_symbols; j++) {
+            printf("From %d with %c -> ", i, symbols[j]);
+            for (k = 0; k < n_states; k++)
+                if (newTrans[i][j][k])
+                    printf("%d ", k);
+            printf("\n");
+        }
+    }
+}
+
+/*  Main  */
+int main() {
+    int newTransitions[MAX_STATES][MAX_SYMBOLS][MAX_STATES];
+    int newFinal[MAX_STATES];
+
+    readNFA();
+    computeEClosures();
+    computeNewTransitions(newTransitions);
+    computeNewFinalStates(newFinal);
+    displayNFA(newTransitions, newFinal);
+
+    return 0;
+}
+
